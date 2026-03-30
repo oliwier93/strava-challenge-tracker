@@ -24,7 +24,7 @@ function getDataDir() {
 
 function copyAppFiles() {
   const dataDir = getDataDir();
-  const filesToCopy = ['index.html', 'server.py'];
+  const filesToCopy = ['index.html', 'style.css', 'app.js', 'server.py'];
 
   for (const file of filesToCopy) {
     const src = getResourcePath(file);
