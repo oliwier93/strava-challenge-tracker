@@ -218,9 +218,12 @@ function renderProgress() {
 // ── Render: activities ──────────────────────────────────────────────
 
 let showAllActivities = false;
+let currentPage = 1;
+const PAGE_SIZE = 10;
 
 function toggleShowAll() {
     showAllActivities = !showAllActivities;
+    currentPage = 1;
     document.getElementById('toggleEventOnly').classList.toggle('active', showAllActivities);
     renderActivities();
 }
@@ -229,6 +232,7 @@ function renderActivities() {
     const data = loadData();
     const event = getActiveEvent();
     const listEl = document.getElementById('activitiesList');
+    const paginationEl = document.getElementById('pagination');
 
     const eventActivities = event ? getEventActivities(event, data) : [];
     const activities = showAllActivities ? eventActivities : data.activities;
@@ -236,14 +240,22 @@ function renderActivities() {
     if (activities.length === 0) {
         const msg = showAllActivities ? 'Brak aktywno\u015Bci w okresie tego eventu.' : 'Brak aktywno\u015Bci. Dodaj pierwsz\u0105!';
         listEl.innerHTML = `<div class="no-activities">${msg}</div>`;
+        paginationEl.style.display = 'none';
         return;
     }
+
+    const sorted = [...activities].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = sorted.slice(start, start + PAGE_SIZE);
 
     const eventStart = event?.startDate || '';
     const eventEnd = event?.endDate || '';
 
-    const sorted = [...activities].sort((a, b) => new Date(b.date) - new Date(a.date));
-    listEl.innerHTML = sorted.map(a => {
+    listEl.innerHTML = pageItems.map(a => {
         const inEvent = a.date >= eventStart && a.date <= eventEnd;
         const badge = inEvent ? '<span class="event-badge" title="Liczy si\u0119 do eventu"></span>' : '';
         const stravaBadge = a.strava_id ? '<span class="strava-badge" title="Ze Stravy">S</span>' : '';
@@ -263,6 +275,21 @@ function renderActivities() {
             </div>
         </div>`;
     }).join('');
+
+    // Pagination
+    if (totalPages <= 1) {
+        paginationEl.style.display = 'none';
+    } else {
+        paginationEl.style.display = 'flex';
+        document.getElementById('pageInfo').textContent = `${currentPage} / ${totalPages}`;
+        document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+        document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+    }
+}
+
+function goToPage(delta) {
+    currentPage += delta;
+    renderActivities();
 }
 
 // ── Activities CRUD ─────────────────────────────────────────────────

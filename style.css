@@ -629,6 +629,36 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     font-size: 0.85rem;
 }
 
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #1a2744;
+}
+
+.pagination .event-icon-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 1.2rem;
+}
+
+.pagination .event-icon-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+    pointer-events: none;
+}
+
+.page-info {
+    color: #888;
+    font-size: 0.85rem;
+    min-width: 50px;
+    text-align: center;
+}
+
 .empty-event-prompt {
     text-align: center;
     padding: 40px 20px;
