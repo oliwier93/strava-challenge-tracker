@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.eb-cache/
+.electron-cache/
+__pycache__/
+*.pyc
+data.json
+strava_config.json
+strava_tokens.json
+.claude/

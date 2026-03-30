@@ -1,0 +1,56 @@
+{
+  "name": "strava-challenge-tracker",
+  "version": "1.0.0",
+  "description": "Tracker postępów w firmowych wyzwaniach sportowych",
+  "main": "main.js",
+  "author": "Oliwier Baran",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win && node build-icon.js && electron-builder --win --prepackaged dist/win-unpacked",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.oliwierbaran.strava-challenge-tracker",
+    "productName": "Strava Challenge Tracker",
+    "files": [
+      "main.js",
+      "index.html",
+      "server.py",
+      "icon.ico",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "server.py",
+        "to": "server.py"
+      },
+      {
+        "from": "index.html",
+        "to": "index.html"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Strava Challenge Tracker",
+      "uninstallDisplayName": "Strava Challenge Tracker"
+    }
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0",
+    "rcedit": "^5.0.2"
+  }
+}

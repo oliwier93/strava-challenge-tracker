@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strava Challenge Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0 20px;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            color: #fc4c02;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        /* Event selector */
+        .event-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .event-bar select {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 14px;
+            background: #16213e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 0.95rem;
+        }
+
+        .event-dates {
+            width: 100%;
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: -15px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-primary {
+            background: #fc4c02;
+            color: white;
+        }
+
+        .btn-primary:hover { background: #e04400; }
+
+        .btn-secondary {
+            background: #16213e;
+            color: #e0e0e0;
+            border: 1px solid #333;
+        }
+
+        .btn-secondary:hover { background: #1a2744; }
+
+        .btn-danger {
+            background: #c0392b;
+            color: white;
+        }
+
+        .btn-danger:hover { background: #a93226; }
+
+        .btn-small {
+            padding: 5px 12px;
+            font-size: 0.8rem;
+        }
+
+        /* Progress section */
+        .progress-section {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 15px;
+        }
+
+        .progress-header h2 {
+            font-size: 1.1rem;
+            color: #ccc;
+        }
+
+        .total-minutes {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fc4c02;
+        }
+
+        .total-minutes span {
+            font-size: 0.9rem;
+            color: #888;
+            font-weight: 400;
+        }
+
+        .progress-bar-container {
+            position: relative;
+            background: #0f3460;
+            border-radius: 10px;
+            height: 32px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #fc4c02, #ff7b3a);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            min-width: 0;
+        }
+
+        .threshold-markers {
+            position: relative;
+            height: 30px;
+            margin-bottom: 8px;
+        }
+
+        .threshold-marker {
+            position: absolute;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 0.7rem;
+            color: #888;
+            line-height: 1.3;
+        }
+
+        .threshold-marker .mins {
+            font-weight: 600;
+            color: #aaa;
+        }
+
+        .threshold-marker.achieved .mins {
+            color: #fc4c02;
+        }
+
+        .current-reward {
+            text-align: center;
+            margin-top: 15px;
+            padding: 12px;
+            background: #0f3460;
+            border-radius: 8px;
+        }
+
+        .current-reward .label { color: #888; font-size: 0.85rem; }
+        .current-reward .value { font-size: 1.5rem; font-weight: 700; color: #2ecc71; margin-top: 4px; }
+        .current-reward .next { color: #888; font-size: 0.8rem; margin-top: 6px; }
+
+        /* Date picker white icon */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        .event-icon-btn {
+            background: none;
+            border: 1px solid #333;
+            color: #aaa;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .event-icon-btn:hover {
+            border-color: #fc4c02;
+            color: #fc4c02;
+        }
+
+        .event-icon-btn.danger:hover {
+            border-color: #c0392b;
+            color: #c0392b;
+        }
+
+        .event-icon-btn.add {
+            background: #fc4c02;
+            border-color: #fc4c02;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .event-icon-btn.add:hover {
+            background: #e04400;
+        }
+
+        .settings-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: 1px solid #333;
+            color: #aaa;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 50;
+        }
+
+        .settings-btn:hover {
+            border-color: #fc4c02;
+            color: #fc4c02;
+        }
+
+        /* Activities list */
+        .activities-section {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .activities-section h3 {
+            margin-bottom: 15px;
+            font-size: 1rem;
+            color: #ccc;
+        }
+
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #1a2744;
+        }
+
+        .activity-item:last-child { border-bottom: none; }
+
+        .activity-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .activity-type-icon {
+            font-size: 1.3rem;
+            width: 28px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .activity-details { flex: 1; }
+
+        .activity-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .event-badge {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2ecc71;
+            flex-shrink: 0;
+        }
+
+        .activity-date {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .activity-minutes {
+            font-weight: 700;
+            color: #fc4c02;
+            font-size: 1.1rem;
+            margin-right: 10px;
+            white-space: nowrap;
+        }
+
+        .activity-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: background 0.2s;
+            line-height: 1;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .icon-btn.edit { color: #888; }
+        .icon-btn.edit:hover { color: #3498db; }
+        .icon-btn.delete { color: #888; }
+        .icon-btn.delete:hover { color: #e74c3c; }
+
+        .no-activities {
+            color: #666;
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+        }
+
+        .activities-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .activities-header h3 { margin-bottom: 0; }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: #888;
+            user-select: none;
+        }
+
+        .toggle-switch .track {
+            width: 36px;
+            height: 20px;
+            background: #0f3460;
+            border-radius: 10px;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .toggle-switch .track::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 14px;
+            height: 14px;
+            background: #888;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .toggle-switch.active .track {
+            background: #fc4c02;
+        }
+
+        .toggle-switch.active .track::after {
+            left: 19px;
+            background: white;
+        }
+
+        .toggle-switch.active .toggle-label {
+            color: #e0e0e0;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #ccc;
+        }
+
+        .modal .form-group {
+            margin-bottom: 15px;
+            min-width: unset;
+        }
+
+        .modal .form-group input, .modal .form-group textarea, .modal .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0f3460;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .modal .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            margin-bottom: 0;
+        }
+
+        .modal-header-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .date-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .date-row .form-group {
+            flex: 1;
+        }
+
+        .threshold-input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .threshold-input-row input {
+            flex: 1;
+            padding: 8px 10px;
+            background: #0f3460;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 0.85rem;
+        }
+
+        .threshold-input-row .btn { flex-shrink: 0; }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #c0392b;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            z-index: 200;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+        }
+
+        .toast.success { background: #27ae60; }
+
+        .toast.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .form-group input.invalid, .form-group select.invalid {
+            border-color: #c0392b;
+        }
+
+        .time-hint {
+            font-size: 0.7rem;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        /* Settings sections */
+        .settings-section {
+            border-top: 1px solid #333;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+
+        .settings-section h4 {
+            color: #ccc;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .settings-section p {
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+        }
+
+        .settings-btns {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 20px 0 30px;
+            color: #555;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <button class="settings-btn" title="Ustawienia" onclick="openSettingsModal()">&#9881;</button>
+    <div class="container">
+        <header>
+            <h1>Strava Challenge Tracker</h1>
+            <p>Trackuj post&#281;py w firmowych wyzwaniach</p>
+        </header>
+
+        <!-- Event selector -->
+        <div class="event-bar">
+            <select id="eventSelect"></select>
+            <button class="event-icon-btn add" title="Nowy event" onclick="openNewEventModal()">+</button>
+            <button class="event-icon-btn" title="Edytuj event" onclick="openEditEventModal()">&#9998;</button>
+            <button class="event-icon-btn danger" title="Usu&#324; event" onclick="deleteCurrentEvent()">&#10005;</button>
+        </div>
+        <div class="event-dates" id="eventDates"></div>
+
+        <!-- Progress -->
+        <div class="progress-section">
+            <div class="progress-header">
+                <h2>Post&#281;p</h2>
+                <div class="total-minutes" id="totalMinutes">0 <span>min</span></div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBar"></div>
+            </div>
+            <div class="threshold-markers" id="thresholdMarkers"></div>
+            <div class="current-reward" id="currentReward">
+                <div class="label">Obecna nagroda</div>
+                <div class="value" id="rewardValue">0 pkt</div>
+                <div class="next" id="nextThreshold"></div>
+            </div>
+        </div>
+
+        <!-- Activities list -->
+        <div class="activities-section">
+            <div class="activities-header">
+                <h3>Aktywno&#347;ci</h3>
+                <div style="display:flex;align-items:center;gap:10px">
+                <div class="toggle-switch" id="toggleEventOnly" onclick="toggleShowAll()">
+                    <span class="toggle-label">Tylko z eventu</span>
+                    <div class="track"></div>
+                </div>
+                <button class="event-icon-btn add" title="Dodaj aktywno&#347;&#263;" onclick="openActivityModal()">+</button>
+                </div>
+            </div>
+            <div id="activitiesList"></div>
+        </div>
+
+        <footer>Stworzone przez Oliwiera Barana</footer>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Confirm Modal -->
+    <div class="modal-overlay" id="confirmModal" style="z-index:150">
+        <div class="modal" style="max-width:400px;text-align:center">
+            <h3 id="confirmMessage"></h3>
+            <div class="modal-actions" style="justify-content:center">
+                <button class="btn btn-secondary" onclick="resolveConfirm(false)">Anuluj</button>
+                <button class="btn btn-danger" onclick="resolveConfirm(true)">Potwierd&#378;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New/Edit Event Modal -->
+    <div class="modal-overlay" id="eventModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nowy event</h3>
+                <div class="modal-header-actions">
+                    <button class="event-icon-btn" title="Eksportuj event" onclick="exportEvent()">&#8681;</button>
+                    <button class="event-icon-btn" title="Importuj event" onclick="document.getElementById('importEventFile').click()">&#8679;</button>
+                    <input type="file" id="importEventFile" accept=".json" style="display:none" onchange="importEvent(event)">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Nazwa eventu</label>
+                <input type="text" id="eventName" placeholder="np. Kwiecie&#324; 2026">
+            </div>
+            <div class="date-row">
+                <div class="form-group">
+                    <label>Data od</label>
+                    <input type="date" id="eventStartDate">
+                </div>
+                <div class="form-group">
+                    <label>Data do</label>
+                    <input type="date" id="eventEndDate">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Progi (minuty &#8594; punkty)</label>
+                <div id="thresholdInputs"></div>
+                <button class="event-icon-btn add" onclick="addThresholdRow()" style="margin-top:8px" title="Dodaj pr&#243;g">+</button>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Anuluj</button>
+                <button class="btn btn-primary" id="modalSaveBtn" onclick="saveEvent()">Zapisz</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Activity Modal -->
+    <div class="modal-overlay" id="activityModal">
+        <div class="modal" style="max-width:420px">
+            <h3 id="actModalTitle">Dodaj aktywno&#347;&#263;</h3>
+            <div class="form-group">
+                <label>Rodzaj</label>
+                <select id="actType">
+                    <option value="running">Bieganie</option>
+                    <option value="cycling">Rower</option>
+                    <option value="walking">Spacer</option>
+                    <option value="other">Inna</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Nazwa</label>
+                <input type="text" id="actName" placeholder="np. Bieg poranny">
+            </div>
+            <div class="form-group">
+                <label>Czas</label>
+                <input type="text" id="actTime" placeholder="1:30:00">
+                <div class="time-hint">gg:mm:ss lub minuty</div>
+            </div>
+            <div class="form-group">
+                <label>Data</label>
+                <input type="date" id="actDate">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeActivityModal()">Anuluj</button>
+                <button class="btn btn-primary" id="actModalSubmitBtn" onclick="submitActivity()">Dodaj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal" style="max-width:450px">
+            <h3>Ustawienia</h3>
+
+            <div class="settings-section" style="border-top:none;padding-top:0;margin-top:0">
+                <h4>Aktywno&#347;ci - eksport / import</h4>
+                <p>Eksportuj lub importuj wszystkie aktywno&#347;ci jako plik JSON.</p>
+                <div class="settings-btns">
+                    <button class="btn btn-secondary" onclick="exportActivities()">&#8681; Eksportuj aktywno&#347;ci</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('importActivitiesFile').click()">&#8679; Importuj aktywno&#347;ci</button>
+                    <input type="file" id="importActivitiesFile" accept=".json" style="display:none" onchange="importActivities(event)">
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Wyczy&#347;&#263; dane</h4>
+                <p>Usuni&#281;cie wszystkich event&#243;w i aktywno&#347;ci. Tej operacji nie mo&#380;na cofn&#261;&#263;.</p>
+                <div class="settings-btns">
+                    <button class="btn btn-danger" onclick="clearAllData()">Wyczy&#347;&#263; wszystko</button>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeSettingsModal()">Zamknij</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ACTIVITY_TYPES = {
+            running: { icon: '\u{1F3C3}', label: 'Bieganie' },
+            cycling: { icon: '\u{1F6B4}', label: 'Rower' },
+            walking: { icon: '\u{1F6B6}', label: 'Spacer' },
+            other:   { icon: '\u{1F4AA}', label: 'Inna' },
+        };
+
+        // Toast & custom confirm
+        let toastTimer;
+        function showToast(msg, type = 'error') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type;
+            clearTimeout(toastTimer);
+            requestAnimationFrame(() => { t.classList.add('visible'); });
+            toastTimer = setTimeout(() => t.classList.remove('visible'), 3000);
+        }
+
+        let confirmResolver = null;
+        function customConfirm(msg) {
+            return new Promise(resolve => {
+                confirmResolver = resolve;
+                document.getElementById('confirmMessage').textContent = msg;
+                document.getElementById('confirmModal').classList.add('active');
+            });
+        }
+        function resolveConfirm(val) {
+            document.getElementById('confirmModal').classList.remove('active');
+            if (confirmResolver) { confirmResolver(val); confirmResolver = null; }
+        }
+
+        // In-memory cache, synced with server JSON file
+        let _data = null;
+
+        function loadData() {
+            if (!_data) _data = { events: [], activities: [], activeEventId: null };
+            return _data;
+        }
+
+        function saveData(data) {
+            _data = data;
+            fetch('/api/data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).catch(() => showToast('Nie uda\u0142o si\u0119 zapisa\u0107 danych na serwer.'));
+        }
+
+        async function loadDataFromServer() {
+            try {
+                const res = await fetch('/api/data');
+                _data = await res.json();
+            } catch {
+                const raw = localStorage.getItem('strava-challenge-data');
+                if (raw) {
+                    _data = JSON.parse(raw);
+                    if (!_data.activities) {
+                        _data.activities = [];
+                        for (const ev of _data.events) {
+                            if (ev.activities) {
+                                _data.activities.push(...ev.activities);
+                                delete ev.activities;
+                            }
+                        }
+                    }
+                    saveData(_data);
+                    localStorage.removeItem('strava-challenge-data');
+                } else {
+                    _data = { events: [], activities: [], activeEventId: null };
+                }
+            }
+        }
+
+        function getActiveEvent() {
+            const data = loadData();
+            return data.events.find(e => e.id === data.activeEventId) || null;
+        }
+
+        function getEventActivities(event, data) {
+            if (!event || !event.startDate || !event.endDate) return [];
+            return data.activities.filter(a => a.date >= event.startDate && a.date <= event.endDate);
+        }
+
+        function parseTimeToMinutes(input) {
+            input = input.trim();
+            if (!input) return NaN;
+            if (input.includes(':')) {
+                const parts = input.split(':').map(Number);
+                if (parts.some(isNaN)) return NaN;
+                if (parts.length === 3) return Math.round(parts[0] * 60 + parts[1] + parts[2] / 60);
+                if (parts.length === 2) return Math.round(parts[0] + parts[1] / 60);
+                return NaN;
+            }
+            const num = parseFloat(input);
+            return isNaN(num) || num <= 0 ? NaN : Math.round(num);
+        }
+
+        function minutesToDisplay(mins) {
+            if (mins >= 60) {
+                const h = Math.floor(mins / 60);
+                const m = mins % 60;
+                return m > 0 ? `${h}h ${m}min` : `${h}h`;
+            }
+            return `${mins} min`;
+        }
+
+
+
+        // Render event selector
+        function renderEventSelect() {
+            const data = loadData();
+            const sel = document.getElementById('eventSelect');
+            sel.innerHTML = data.events.map(e =>
+                `<option value="${e.id}" ${e.id === data.activeEventId ? 'selected' : ''}>${e.name}</option>`
+            ).join('');
+
+            if (data.events.length === 0) {
+                sel.innerHTML = '<option>Brak event\u00f3w</option>';
+            }
+
+            const event = data.events.find(e => e.id === data.activeEventId);
+            const datesEl = document.getElementById('eventDates');
+            if (event && event.startDate && event.endDate) {
+                datesEl.textContent = `${formatDate(event.startDate)} \u2014 ${formatDate(event.endDate)}`;
+            } else {
+                datesEl.textContent = '';
+            }
+        }
+
+        document.getElementById('eventSelect').addEventListener('change', function() {
+            const data = loadData();
+            data.activeEventId = parseInt(this.value);
+            saveData(data);
+            renderAll();
+        });
+
+        // Render progress
+        function renderProgress() {
+            const data = loadData();
+            const event = getActiveEvent();
+            if (!event) {
+                document.getElementById('totalMinutes').textContent = '0 min';
+                document.getElementById('progressBar').style.width = '0%';
+                document.getElementById('thresholdMarkers').innerHTML = '';
+                document.getElementById('rewardValue').textContent = '0 pkt';
+                document.getElementById('nextThreshold').textContent = '';
+                return;
+            }
+
+            const matched = getEventActivities(event, data);
+            const totalMins = matched.reduce((sum, a) => sum + a.minutes, 0);
+            document.getElementById('totalMinutes').innerHTML = `${totalMins} <span>min</span>`;
+
+            const thresholds = event.thresholds.sort((a, b) => a.minutes - b.minutes);
+            const maxThreshold = thresholds.length > 0 ? thresholds[thresholds.length - 1].minutes : 1000;
+            const progressMax = maxThreshold * 1.1;
+            const pct = Math.min((totalMins / progressMax) * 100, 100);
+            document.getElementById('progressBar').style.width = pct + '%';
+
+            const markersEl = document.getElementById('thresholdMarkers');
+            markersEl.innerHTML = thresholds.map(t => {
+                const left = (t.minutes / progressMax) * 100;
+                const achieved = totalMins >= t.minutes;
+                return `<div class="threshold-marker ${achieved ? 'achieved' : ''}" style="left:${left}%">
+                    <div class="mins">${t.minutes} min</div>
+                    <div>${t.points} pkt</div>
+                </div>`;
+            }).join('');
+
+            let currentPoints = 0;
+            let nextThreshold = null;
+            for (const t of thresholds) {
+                if (totalMins >= t.minutes) {
+                    currentPoints = t.points;
+                } else if (!nextThreshold) {
+                    nextThreshold = t;
+                }
+            }
+
+            document.getElementById('rewardValue').textContent = `${currentPoints} pkt`;
+
+            const nextEl = document.getElementById('nextThreshold');
+            if (nextThreshold) {
+                const remaining = nextThreshold.minutes - totalMins;
+                nextEl.textContent = `Do nast\u0119pnego progu (${nextThreshold.points} pkt): brakuje ${remaining} min`;
+            } else if (thresholds.length > 0) {
+                nextEl.textContent = 'Wszystkie progi osi\u0105gni\u0119te!';
+            } else {
+                nextEl.textContent = '';
+            }
+        }
+
+        // Render activities
+        let showAllActivities = false;
+
+        function toggleShowAll() {
+            showAllActivities = !showAllActivities;
+            document.getElementById('toggleEventOnly').classList.toggle('active', showAllActivities);
+            renderActivities();
+        }
+
+        function renderActivities() {
+            const data = loadData();
+            const event = getActiveEvent();
+            const listEl = document.getElementById('activitiesList');
+
+            const eventActivities = event ? getEventActivities(event, data) : [];
+            const activities = showAllActivities ? eventActivities : data.activities;
+
+            if (activities.length === 0) {
+                const msg = showAllActivities ? 'Brak aktywno\u015Bci w okresie tego eventu.' : 'Brak aktywno\u015Bci. Dodaj pierwsz\u0105!';
+                listEl.innerHTML = `<div class="no-activities">${msg}</div>`;
+                return;
+            }
+
+            const eventStart = event?.startDate || '';
+            const eventEnd = event?.endDate || '';
+
+            const sorted = [...activities].sort((a, b) => new Date(b.date) - new Date(a.date));
+            listEl.innerHTML = sorted.map(a => {
+                const inEvent = a.date >= eventStart && a.date <= eventEnd;
+                const badge = inEvent ? '<span class="event-badge" title="Liczy si\u0119 do eventu"></span>' : '';
+                const typeInfo = ACTIVITY_TYPES[a.type] || ACTIVITY_TYPES.other;
+                return `<div class="activity-item">
+                    <div class="activity-info">
+                        <div class="activity-type-icon" title="${typeInfo.label}">${typeInfo.icon}</div>
+                        <div class="activity-details">
+                            <div class="activity-name">${badge}${escapeHtml(a.name)}</div>
+                            <div class="activity-date">${formatDate(a.date)}</div>
+                        </div>
+                    </div>
+                    <div class="activity-minutes">${minutesToDisplay(a.minutes)}</div>
+                    <div class="activity-actions">
+                        <button class="icon-btn edit" title="Edytuj" onclick="startEditActivity(${a.id})">&#9998;</button>
+                        <button class="icon-btn delete" title="Usu\u0144" onclick="deleteActivity(${a.id})">&#10005;</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        // Add / Edit activity
+        let editingActivityId = null;
+
+        function openActivityModal() {
+            editingActivityId = null;
+            document.getElementById('actModalTitle').textContent = 'Dodaj aktywno\u015B\u0107';
+            document.getElementById('actModalSubmitBtn').textContent = 'Dodaj';
+            document.getElementById('actType').value = 'running';
+            document.getElementById('actName').value = '';
+            document.getElementById('actTime').value = '';
+            document.getElementById('actDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('activityModal').classList.add('active');
+            document.getElementById('actName').focus();
+        }
+
+        function closeActivityModal() {
+            document.getElementById('activityModal').classList.remove('active');
+            editingActivityId = null;
+        }
+
+        function startEditActivity(actId) {
+            const data = loadData();
+            const act = data.activities.find(a => a.id === actId);
+            if (!act) return;
+
+            editingActivityId = actId;
+            document.getElementById('actModalTitle').textContent = 'Edytuj aktywno\u015B\u0107';
+            document.getElementById('actModalSubmitBtn').textContent = 'Zapisz';
+            document.getElementById('actType').value = act.type || 'other';
+            document.getElementById('actName').value = act.name;
+            const h = Math.floor(act.minutes / 60);
+            const m = act.minutes % 60;
+            document.getElementById('actTime').value = `${h}:${String(m).padStart(2, '0')}:00`;
+            document.getElementById('actDate').value = act.date;
+            document.getElementById('activityModal').classList.add('active');
+        }
+
+        function submitActivity() {
+            const data = loadData();
+
+            const type = document.getElementById('actType').value;
+            const name = document.getElementById('actName').value.trim();
+            const timeInput = document.getElementById('actTime').value;
+            const minutes = parseTimeToMinutes(timeInput);
+            const date = document.getElementById('actDate').value;
+
+            if (!name || isNaN(minutes) || minutes <= 0) {
+                showToast('Podaj nazw\u0119 i prawid\u0142owy czas.');
+                if (!name) document.getElementById('actName').classList.add('invalid');
+                if (isNaN(minutes) || minutes <= 0) document.getElementById('actTime').classList.add('invalid');
+                return;
+            }
+            document.getElementById('actName').classList.remove('invalid');
+            document.getElementById('actTime').classList.remove('invalid');
+
+            if (editingActivityId) {
+                const act = data.activities.find(a => a.id === editingActivityId);
+                if (act) {
+                    act.type = type;
+                    act.name = name;
+                    act.minutes = minutes;
+                    act.date = date || new Date().toISOString().split('T')[0];
+                }
+            } else {
+                data.activities.push({
+                    id: Date.now(),
+                    type,
+                    name,
+                    minutes,
+                    date: date || new Date().toISOString().split('T')[0]
+                });
+            }
+
+            saveData(data);
+            closeActivityModal();
+            renderAll();
+        }
+
+        function deleteActivity(actId) {
+            const data = loadData();
+            data.activities = data.activities.filter(a => a.id !== actId);
+            saveData(data);
+            renderAll();
+        }
+
+        // Event modal
+        let editingEventId = null;
+
+        function openNewEventModal() {
+            editingEventId = null;
+            document.getElementById('modalTitle').textContent = 'Nowy event';
+            document.getElementById('eventName').value = '';
+            document.getElementById('eventStartDate').value = '';
+            document.getElementById('eventEndDate').value = '';
+            document.getElementById('thresholdInputs').innerHTML = '';
+            addThresholdRow();
+            addThresholdRow();
+            document.getElementById('eventModal').classList.add('active');
+        }
+
+        function openEditEventModal() {
+            const event = getActiveEvent();
+            if (!event) return;
+            editingEventId = event.id;
+            document.getElementById('modalTitle').textContent = 'Edytuj event';
+            document.getElementById('eventName').value = event.name;
+            document.getElementById('eventStartDate').value = event.startDate || '';
+            document.getElementById('eventEndDate').value = event.endDate || '';
+            document.getElementById('thresholdInputs').innerHTML = '';
+            event.thresholds.forEach(t => addThresholdRow(t.minutes, t.points));
+            document.getElementById('eventModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('eventModal').classList.remove('active');
+        }
+
+        function addThresholdRow(mins = '', pts = '') {
+            const container = document.getElementById('thresholdInputs');
+            const row = document.createElement('div');
+            row.className = 'threshold-input-row';
+            row.innerHTML = `
+                <input type="number" placeholder="Minuty" value="${mins}" class="thresh-mins" min="1">
+                <span style="color:#888">\u2192</span>
+                <input type="number" placeholder="Punkty" value="${pts}" class="thresh-pts" min="1">
+                <button class="icon-btn delete" onclick="this.parentElement.remove()" title="Usu\u0144 pr\u00f3g">&#10005;</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function saveEvent() {
+            const name = document.getElementById('eventName').value.trim();
+            if (!name) { showToast('Podaj nazw\u0119 eventu.'); return; }
+
+            const startDate = document.getElementById('eventStartDate').value;
+            const endDate = document.getElementById('eventEndDate').value;
+            if (!startDate || !endDate) { showToast('Podaj daty od-do eventu.'); return; }
+            if (startDate > endDate) { showToast('Data "od" musi by\u0107 przed dat\u0105 "do".'); return; }
+
+            const rows = document.querySelectorAll('#thresholdInputs .threshold-input-row');
+            const thresholds = [];
+            rows.forEach(row => {
+                const mins = parseInt(row.querySelector('.thresh-mins').value);
+                const pts = parseInt(row.querySelector('.thresh-pts').value);
+                if (mins > 0 && pts > 0) {
+                    thresholds.push({ minutes: mins, points: pts });
+                }
+            });
+
+            const data = loadData();
+
+            if (editingEventId) {
+                const event = data.events.find(e => e.id === editingEventId);
+                if (event) {
+                    event.name = name;
+                    event.startDate = startDate;
+                    event.endDate = endDate;
+                    event.thresholds = thresholds;
+                }
+            } else {
+                const newEvent = {
+                    id: Date.now(),
+                    name,
+                    startDate,
+                    endDate,
+                    thresholds,
+                };
+                data.events.push(newEvent);
+                data.activeEventId = newEvent.id;
+            }
+
+            saveData(data);
+            closeModal();
+            renderAll();
+        }
+
+        async function deleteCurrentEvent() {
+            const event = getActiveEvent();
+            if (!event) return;
+            const ok = await customConfirm(`Usun\u0105\u0107 event "${event.name}"? Aktywno\u015Bci nie zostan\u0105 usuni\u0119te.`);
+            if (!ok) return;
+
+            const data = loadData();
+            data.events = data.events.filter(e => e.id !== event.id);
+            data.activeEventId = data.events.length > 0 ? data.events[0].id : null;
+            saveData(data);
+            renderAll();
+        }
+
+        // Enter key to submit activity in modal
+        document.querySelectorAll('#actName, #actTime, #actDate').forEach(el => {
+            el.addEventListener('keydown', e => {
+                if (e.key === 'Enter') submitActivity();
+            });
+        });
+
+        function renderAll() {
+            renderEventSelect();
+            renderProgress();
+            renderActivities();
+        }
+
+        // Event Export/Import
+        function exportEvent() {
+            const name = document.getElementById('eventName').value.trim();
+            const startDate = document.getElementById('eventStartDate').value;
+            const endDate = document.getElementById('eventEndDate').value;
+            const rows = document.querySelectorAll('#thresholdInputs .threshold-input-row');
+            const thresholds = [];
+            rows.forEach(row => {
+                const mins = parseInt(row.querySelector('.thresh-mins').value);
+                const pts = parseInt(row.querySelector('.thresh-pts').value);
+                if (mins > 0 && pts > 0) thresholds.push({ minutes: mins, points: pts });
+            });
+
+            const eventData = { name, startDate, endDate, thresholds };
+            const blob = new Blob([JSON.stringify(eventData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `event-${(name || 'nowy').replace(/\s+/g, '-').toLowerCase()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Event wyeksportowany!', 'success');
+        }
+
+        function importEvent(ev) {
+            const file = ev.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (!imported.name || !imported.startDate || !imported.endDate) {
+                        showToast('Nieprawid\u0142owy format pliku eventu.');
+                        return;
+                    }
+                    document.getElementById('eventName').value = imported.name || '';
+                    document.getElementById('eventStartDate').value = imported.startDate || '';
+                    document.getElementById('eventEndDate').value = imported.endDate || '';
+                    document.getElementById('thresholdInputs').innerHTML = '';
+                    (imported.thresholds || []).forEach(t => addThresholdRow(t.minutes, t.points));
+                    showToast('Event zaimportowany do formularza!', 'success');
+                } catch {
+                    showToast('B\u0142\u0105d odczytu pliku.');
+                }
+            };
+            reader.readAsText(file);
+            ev.target.value = '';
+        }
+
+        // Activities Export/Import
+        function exportActivities() {
+            const data = loadData();
+            const blob = new Blob([JSON.stringify(data.activities, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'aktywnosci.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Aktywno\u015Bci wyeksportowane!', 'success');
+        }
+
+        function importActivities(ev) {
+            const file = ev.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (!Array.isArray(imported)) {
+                        showToast('Nieprawid\u0142owy format pliku.');
+                        return;
+                    }
+                    const data = loadData();
+                    const existingIds = new Set(data.activities.map(a => a.id));
+                    let added = 0;
+                    for (const act of imported) {
+                        if (act.name && act.minutes && act.date && !existingIds.has(act.id)) {
+                            data.activities.push({
+                                id: act.id || Date.now() + added,
+                                type: act.type || 'other',
+                                name: act.name,
+                                minutes: act.minutes,
+                                date: act.date,
+                            });
+                            added++;
+                        }
+                    }
+                    saveData(data);
+                    renderAll();
+                    showToast(`Zaimportowano ${added} aktywno\u015Bci!`, 'success');
+                } catch {
+                    showToast('B\u0142\u0105d odczytu pliku.');
+                }
+            };
+            reader.readAsText(file);
+            ev.target.value = '';
+        }
+
+        // Clear all data
+        async function clearAllData() {
+            const ok = await customConfirm('Czy na pewno chcesz wyczy\u015Bci\u0107 wszystkie dane? Usuni\u0119te zostan\u0105 wszystkie eventy i aktywno\u015Bci. Tej operacji nie mo\u017Cna cofn\u0105\u0107!');
+            if (!ok) return;
+            _data = { events: [], activities: [], activeEventId: null };
+            saveData(_data);
+            closeSettingsModal();
+            renderAll();
+            showToast('Wszystkie dane zosta\u0142y usuni\u0119te.', 'success');
+        }
+
+        // Settings modal
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        // Init
+        (async () => {
+            await loadDataFromServer();
+            renderAll();
+        })();
+    </script>
+</body>
+</html>
