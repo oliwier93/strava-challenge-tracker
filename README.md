@@ -1,50 +1,71 @@
 # Strava Challenge Tracker
 
-Aplikacja webowa do śledzenia postępów w miesięcznych firmowych wyzwaniach sportowych (np. Strava workplace challenges). Pozwala definiować eventy z progami minutowymi i punktowymi, dodawać aktywności oraz monitorować postęp na pasku graficznym.
+Aplikacja desktopowa do sledzenia postepow w miesiecznych firmowych wyzwaniach sportowych (np. Strava workplace challenges). Pozwala definiowac eventy z progami minutowymi i punktowymi, dodawac aktywnosci oraz monitorowac postep na pasku graficznym.
 
-## Wymagania
+## Pobieranie
+
+Gotowy installer Windows (.exe) dostepny w zakladce [Releases](https://github.com/oliwier93/strava-challenge-tracker/releases).
+
+## Uruchomienie z kodu zrodlowego
+
+### Wymagania
 
 - Python 3.7+
+- Node.js 18+ (do budowania aplikacji desktopowej)
 
-Brak zewnętrznych zależności - aplikacja korzysta wyłącznie ze standardowej biblioteki Pythona.
-
-## Uruchomienie
-
-1. Sklonuj lub pobierz repozytorium.
-
-2. Uruchom serwer:
+### Tryb przegladarkowy (bez Electrona)
 
 ```bash
 python server.py
 ```
 
-3. Otwórz przeglądarkę pod adresem:
+Otworz przegladarke: `http://localhost:3001`
+
+### Tryb desktopowy (Electron)
+
+```bash
+npm install
+npm start
+```
+
+### Budowanie installera Windows
+
+```bash
+npm install
+npm run build
+```
+
+Installer pojawi sie w folderze `dist/`.
+
+> **Uwaga:** Zbudowana aplikacja wymaga Pythona zainstalowanego na maszynie docelowej.
+
+## Struktura plikow
 
 ```
-http://localhost:3001
-```
-
-## Struktura plików
-
-```
-├── index.html       # Główna aplikacja (HTML + CSS + JS w jednym pliku)
-├── server.py        # Serwer Python (API + serwowanie plików statycznych)
-├── data.json        # Dane aplikacji (tworzony automatycznie)
+├── index.html       # Glowna aplikacja (HTML + CSS + JS w jednym pliku)
+├── server.py        # Serwer Python (API + serwowanie plikow statycznych)
+├── main.js          # Proces glowny Electron
+├── build-icon.js    # Skrypt wstrzykujacy ikone do .exe
+├── create_icon.py   # Generator ikony aplikacji
+├── icon.ico         # Ikona aplikacji
+├── package.json     # Konfiguracja Node.js / Electron / electron-builder
+├── data.json        # Dane aplikacji (tworzony automatycznie, nie w repo)
 └── README.md
 ```
 
 ## Funkcje
 
-- Tworzenie eventów z datami i progami (minuty -> punkty)
-- Dodawanie aktywności (bieganie, rower, spacer, inne) z czasem w formacie gg:mm:ss
-- Pasek postępu z oznaczeniami progów
-- Filtrowanie aktywności po okresie eventu
-- Eksport/import eventów i aktywności jako JSON
-- Czyszczenie danych z poziomu ustawień
+- Tworzenie eventow z datami i progami (minuty -> punkty)
+- Dodawanie aktywnosci (bieganie, rower, spacer, inne) z czasem w formacie gg:mm:ss
+- Pasek postepu z oznaczeniami progow
+- Filtrowanie aktywnosci po okresie eventu
+- Eksport/import eventow i aktywnosci jako JSON
+- Czyszczenie danych z poziomu ustawien
+- Natywna aplikacja desktopowa (Electron) z instalatorem Windows
 
 ## Dane
 
-Dane są przechowywane w pliku `data.json` w katalogu aplikacji. Plik jest tworzony automatycznie przy pierwszym uruchomieniu.
+Dane sa przechowywane w pliku `data.json` w katalogu aplikacji. Plik jest tworzony automatycznie przy pierwszym uruchomieniu.
 
 ## Autor
 
