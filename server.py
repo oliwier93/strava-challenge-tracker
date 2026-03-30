@@ -4,7 +4,9 @@ import json
 import os
 
 PORT = 3001
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Use current working directory for data and serving files
+# (Electron sets cwd to the writable data directory)
+BASE_DIR = os.getcwd()
 DATA_FILE = os.path.join(BASE_DIR, "data.json")
 
 
@@ -54,8 +56,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    os.chdir(BASE_DIR)
     print(f"Strava Challenge Tracker @ http://localhost:{PORT}")
+    print(f"Data dir: {BASE_DIR}")
 
     class ThreadedServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         daemon_threads = True

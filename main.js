@@ -2,6 +2,7 @@ const { app, BrowserWindow } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const net = require('net');
+const fs = require('fs');
 
 const PORT = 3001;
 let serverProcess = null;
@@ -15,20 +16,34 @@ function getResourcePath(filename) {
 }
 
 function getDataDir() {
-  // Store data in user's app data directory when packaged
   if (app.isPackaged) {
     return app.getPath('userData');
   }
   return __dirname;
 }
 
-function startServer() {
-  const serverPath = getResourcePath('server.py');
+function copyAppFiles() {
   const dataDir = getDataDir();
+  const filesToCopy = ['index.html', 'server.py'];
+
+  for (const file of filesToCopy) {
+    const src = getResourcePath(file);
+    const dest = path.join(dataDir, file);
+    // Always overwrite app files (they may have been updated)
+    // But never overwrite data.json
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, dest);
+    }
+  }
+}
+
+function startServer() {
+  const dataDir = getDataDir();
+  const serverPath = path.join(dataDir, 'server.py');
 
   serverProcess = spawn('python', [serverPath], {
     cwd: dataDir,
-    env: { ...process.env, STRAVA_DATA_DIR: dataDir },
+    env: { ...process.env },
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
@@ -121,17 +136,8 @@ function stopServer() {
 }
 
 app.whenReady().then(async () => {
-  // Copy index.html and server.py to data dir if packaged and missing
   if (app.isPackaged) {
-    const fs = require('fs');
-    const dataDir = getDataDir();
-    const filesToCopy = ['index.html', 'server.py'];
-    for (const file of filesToCopy) {
-      const dest = path.join(dataDir, file);
-      if (!fs.existsSync(dest)) {
-        fs.copyFileSync(getResourcePath(file), dest);
-      }
-    }
+    copyAppFiles();
   }
 
   startServer();
