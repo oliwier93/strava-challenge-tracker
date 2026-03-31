@@ -24,17 +24,19 @@ function getDataDir() {
 
 function copyAppFiles() {
   const dataDir = getDataDir();
-  const filesToCopy = ['index.html', 'server.py'];
 
-  for (const file of filesToCopy) {
+  // Always overwrite app code files (they may have been updated)
+  const codeFiles = ['index.html', 'style.css', 'app.js', 'server.py'];
+  for (const file of codeFiles) {
     const src = getResourcePath(file);
     const dest = path.join(dataDir, file);
-    // Always overwrite app files (they may have been updated)
-    // But never overwrite data.json
     if (fs.existsSync(src)) {
       fs.copyFileSync(src, dest);
     }
   }
+
+  console.log(`[app] Data directory: ${dataDir}`);
+  console.log(`[app] Files in data dir:`, fs.readdirSync(dataDir).filter(f => f.endsWith('.json') || f.endsWith('.py') || f.endsWith('.html') || f.endsWith('.js') || f.endsWith('.css')));
 }
 
 function startServer() {
