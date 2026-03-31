@@ -255,6 +255,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     print(f"Strava Challenge Tracker @ http://localhost:{PORT}")
     print(f"Data dir: {BASE_DIR}")
+    print(f"Data file exists: {os.path.exists(DATA_FILE)}")
+    print(f"Strava config exists: {os.path.exists(STRAVA_CONFIG_FILE)}")
+    print(f"Strava tokens exists: {os.path.exists(STRAVA_TOKENS_FILE)}")
 
     class ThreadedServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         daemon_threads = True
