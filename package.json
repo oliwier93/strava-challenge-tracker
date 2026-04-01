@@ -1,6 +1,6 @@
 {
   "name": "strava-challenge-tracker",
-  "version": "1.2.1",
+  "version": "1.2.0",
   "description": "Tracker postępów w firmowych wyzwaniach sportowych",
   "main": "main.js",
   "author": "Oliwier Baran",
