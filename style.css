@@ -146,11 +146,13 @@ header p {
     background: #0f3460;
     border-radius: 10px;
     height: 32px;
-    margin-bottom: 12px;
+    margin-bottom: 18px;
     overflow: hidden;
 }
 
 .progress-bar-fill {
+    position: relative;
+    z-index: 1;
     height: 100%;
     background: linear-gradient(90deg, #fc4c02, #ff7b3a);
     border-radius: 10px;
@@ -158,19 +160,99 @@ header p {
     min-width: 0;
 }
 
+.progress-threshold-guides {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.progress-threshold-guide {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    border-left: 1px dashed rgba(214, 223, 235, 0.22);
+    transform: translateX(-50%);
+}
+
+.progress-threshold-guide.achieved {
+    border-left-color: rgba(252, 76, 2, 0.28);
+}
+
+.progress-threshold-guide.selected {
+    border-left-color: rgba(252, 76, 2, 0.75);
+}
+
 .threshold-markers {
     position: relative;
-    height: 30px;
-    margin-bottom: 8px;
+    height: 58px;
+    margin-bottom: 6px;
 }
 
 .threshold-marker {
     position: absolute;
     transform: translateX(-50%);
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 90px;
+    min-height: 46px;
+    padding: 8px 12px;
     text-align: center;
     font-size: 0.7rem;
     color: #888;
     line-height: 1.3;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 6px;
+    border: 1px solid #333;
+    background: rgba(15, 52, 96, 0.65);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+    font-family: inherit;
+}
+
+.threshold-marker::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -18px;
+    height: 18px;
+    border-left: 1px dashed rgba(138, 160, 188, 0.4);
+    transform: translateX(-50%);
+}
+
+.threshold-marker:hover {
+    border-color: #fc4c02;
+    color: #ccc;
+    transform: translateX(-50%) translateY(-2px);
+}
+
+.threshold-marker:focus-visible {
+    outline: 2px solid rgba(252, 76, 2, 0.55);
+    outline-offset: 2px;
+}
+
+.threshold-marker.achieved {
+    color: #b7c4d5;
+    background: rgba(252, 76, 2, 0.1);
+}
+
+.threshold-marker.achieved::before {
+    border-left-color: rgba(252, 76, 2, 0.3);
+}
+
+.threshold-marker.selected {
+    background: rgba(252, 76, 2, 0.15);
+    border-color: #fc4c02;
+    color: #e0e0e0;
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 12px 24px rgba(252, 76, 2, 0.18);
+}
+
+.threshold-marker.selected::before {
+    border-left-color: rgba(252, 76, 2, 0.75);
 }
 
 .threshold-marker .mins {
@@ -184,15 +266,141 @@ header p {
 
 .current-reward {
     text-align: center;
-    margin-top: 15px;
-    padding: 12px;
+    margin-bottom: 15px;
+    padding: 12px 14px;
     background: #0f3460;
     border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
-.current-reward .label { color: #888; font-size: 0.85rem; }
-.current-reward .value { font-size: 1.5rem; font-weight: 700; color: #2ecc71; margin-top: 4px; }
-.current-reward .next { color: #888; font-size: 0.8rem; margin-top: 6px; }
+.current-reward .label {
+    color: #8aa0bc;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.current-reward .value { font-size: 1.4rem; font-weight: 700; color: #2ecc71; margin-top: 4px; }
+.current-reward .next { color: #888; font-size: 0.8rem; margin-top: 4px; }
+
+/* Goal analysis */
+.goal-analysis {
+    margin-top: 15px;
+    display: none;
+}
+
+.goal-analysis.visible {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.goal-summary,
+.goal-metric-card {
+    background: #0f3460;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.goal-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+}
+
+.goal-summary-label {
+    font-size: 0.78rem;
+    color: #8aa0bc;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.goal-summary-value {
+    font-size: 1rem;
+    color: #f4f7fb;
+    text-align: right;
+}
+
+.goal-summary.success .goal-summary-value {
+    color: #2ecc71;
+}
+
+.goal-summary.danger .goal-summary-value {
+    color: #ff8f84;
+}
+
+.goal-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+}
+
+.goal-metric-card {
+    min-height: 126px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.goal-metric-card.muted {
+    opacity: 0.75;
+}
+
+.goal-metric-label {
+    font-size: 0.76rem;
+    color: #8aa0bc;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.goal-metric-main {
+    font-size: 1.45rem;
+    line-height: 1;
+    color: #f4f7fb;
+}
+
+.goal-metric-main-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.goal-metric-foot {
+    font-size: 0.82rem;
+    color: #96a7bc;
+}
+
+.goal-delta {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.goal-delta.ahead {
+    color: #2ecc71;
+    background: rgba(46, 204, 113, 0.12);
+}
+
+.goal-delta.behind {
+    color: #e74c3c;
+    background: rgba(231, 76, 60, 0.12);
+}
+
+.goal-delta.on-track {
+    color: #6ec1ff;
+    background: rgba(110, 193, 255, 0.14);
+}
 
 /* Date picker white icon */
 input[type="date"]::-webkit-calendar-picker-indicator {
@@ -676,4 +884,63 @@ footer {
     padding: 20px 0 30px;
     color: #555;
     font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+    .container,
+    .progress-section,
+    .activities-section {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .progress-header,
+    .activities-header,
+    .goal-summary {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .goal-summary-value {
+        text-align: left;
+    }
+
+    .goal-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .goal-metric-card {
+        min-height: 0;
+    }
+
+    .goal-metric-main-row {
+        align-items: flex-start;
+    }
+
+    .goal-delta {
+        font-size: 0.68rem;
+    }
+
+    .threshold-markers {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        height: auto;
+    }
+
+    .threshold-marker {
+        position: static;
+        transform: none;
+        flex: 1 1 140px;
+        min-width: 0;
+    }
+
+    .threshold-marker::before {
+        display: none;
+    }
+
+    .threshold-marker:hover,
+    .threshold-marker.selected {
+        transform: none;
+    }
 }

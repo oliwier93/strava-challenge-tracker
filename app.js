@@ -99,13 +99,32 @@ function parseTimeToMinutes(input) {
     return isNaN(num) || num <= 0 ? NaN : Math.round(num);
 }
 
-function minutesToDisplay(mins) {
-    if (mins >= 60) {
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        return m > 0 ? `${h}h ${m}min` : `${h}h`;
-    }
-    return `${mins} min`;
+function minutesToHHMM(mins) {
+    const roundedMinutes = Math.max(0, Math.round(mins));
+    const h = Math.floor(roundedMinutes / 60);
+    const m = roundedMinutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function formatMinutesWithClock(mins) {
+    const roundedMinutes = Math.max(0, Math.round(mins));
+    return `${roundedMinutes} min (${minutesToHHMM(roundedMinutes)})`;
+}
+
+function getLocalDateString(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function dateStringToUtcMs(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return Date.UTC(year, month - 1, day);
+}
+
+function diffDays(startDateStr, endDateStr) {
+    return Math.round((dateStringToUtcMs(endDateStr) - dateStringToUtcMs(startDateStr)) / 86400000);
 }
 
 function escapeHtml(str) {
@@ -154,29 +173,52 @@ function renderEventSelect() {
 document.getElementById('eventSelect').addEventListener('change', function() {
     const data = loadData();
     data.activeEventId = parseInt(this.value);
+    selectedGoal = null;
     saveData(data);
     renderAll();
 });
 
 // ── Render: progress ────────────────────────────────────────────────
 
+let selectedGoal = null;
+
+function selectGoal(minutes, points) {
+    if (selectedGoal && selectedGoal.minutes === minutes && selectedGoal.points === points) {
+        selectedGoal = null;
+    } else {
+        selectedGoal = { minutes, points };
+    }
+    renderProgress();
+}
+
 function renderProgress() {
     const data = loadData();
     const event = getActiveEvent();
+    const goalEl = document.getElementById('goalAnalysis');
+    const guidesEl = document.getElementById('progressThresholdGuides');
+
     if (!event) {
-        document.getElementById('totalMinutes').textContent = '0 min';
+        selectedGoal = null;
+        document.getElementById('totalMinutes').innerHTML = '0 <span>min (00:00)</span>';
         document.getElementById('progressBar').style.width = '0%';
         document.getElementById('thresholdMarkers').innerHTML = '';
+        guidesEl.innerHTML = '';
         document.getElementById('rewardValue').textContent = '0 pkt';
         document.getElementById('nextThreshold').textContent = '';
+        goalEl.innerHTML = '';
+        goalEl.classList.remove('visible');
         return;
     }
 
     const matched = getEventActivities(event, data);
     const totalMins = matched.reduce((sum, a) => sum + a.minutes, 0);
-    document.getElementById('totalMinutes').innerHTML = `${totalMins} <span>min</span>`;
+    document.getElementById('totalMinutes').innerHTML = `${totalMins} <span>min (${minutesToHHMM(totalMins)})</span>`;
 
-    const thresholds = event.thresholds.sort((a, b) => a.minutes - b.minutes);
+    const thresholds = [...event.thresholds].sort((a, b) => a.minutes - b.minutes);
+    if (selectedGoal) {
+        const activeGoal = thresholds.find(t => t.minutes === selectedGoal.minutes);
+        selectedGoal = activeGoal ? { minutes: activeGoal.minutes, points: activeGoal.points } : null;
+    }
     const maxThreshold = thresholds.length > 0 ? thresholds[thresholds.length - 1].minutes : 1000;
     const progressMax = maxThreshold * 1.1;
     const pct = Math.min((totalMins / progressMax) * 100, 100);
@@ -186,10 +228,19 @@ function renderProgress() {
     markersEl.innerHTML = thresholds.map(t => {
         const left = (t.minutes / progressMax) * 100;
         const achieved = totalMins >= t.minutes;
-        return `<div class="threshold-marker ${achieved ? 'achieved' : ''}" style="left:${left}%">
+        const selected = selectedGoal && selectedGoal.minutes === t.minutes;
+        const title = `Sprawdź tempo dla progu ${t.minutes} min`;
+        return `<button type="button" class="threshold-marker ${achieved ? 'achieved' : ''} ${selected ? 'selected' : ''}" style="left:${left}%" data-mins="${t.minutes}" data-pts="${t.points}" aria-pressed="${selected ? 'true' : 'false'}" title="${title}">
             <div class="mins">${t.minutes} min</div>
             <div>${t.points} pkt</div>
-        </div>`;
+        </button>`;
+    }).join('');
+
+    guidesEl.innerHTML = thresholds.map(t => {
+        const left = (t.minutes / progressMax) * 100;
+        const achieved = totalMins >= t.minutes;
+        const selected = selectedGoal && selectedGoal.minutes === t.minutes;
+        return `<span class="progress-threshold-guide ${achieved ? 'achieved' : ''} ${selected ? 'selected' : ''}" style="left:${left}%"></span>`;
     }).join('');
 
     let currentPoints = 0;
@@ -207,12 +258,147 @@ function renderProgress() {
     const nextEl = document.getElementById('nextThreshold');
     if (nextThreshold) {
         const remaining = nextThreshold.minutes - totalMins;
-        nextEl.textContent = `Do nast\u0119pnego progu (${nextThreshold.points} pkt): brakuje ${remaining} min`;
+        nextEl.textContent = `Do nast\u0119pnego progu (${nextThreshold.points} pkt): brakuje ${formatMinutesWithClock(remaining)}`;
     } else if (thresholds.length > 0) {
         nextEl.textContent = 'Wszystkie progi osi\u0105gni\u0119te!';
     } else {
         nextEl.textContent = '';
     }
+
+    renderGoalAnalysis(event, matched, totalMins);
+}
+
+function renderGoalAnalysis(event, activities, totalMins) {
+    const el = document.getElementById('goalAnalysis');
+
+    if (!selectedGoal) {
+        el.innerHTML = '';
+        el.classList.remove('visible');
+        return;
+    }
+
+    const goal = selectedGoal.minutes;
+    const goalPts = selectedGoal.points;
+    const todayStr = getLocalDateString();
+    const totalDays = diffDays(event.startDate, event.endDate) + 1;
+    const eventEnded = todayStr > event.endDate;
+    const eventNotStarted = todayStr < event.startDate;
+    const goalReached = totalMins >= goal;
+
+    const todayMins = activities
+        .filter(a => a.date === todayStr)
+        .reduce((sum, a) => sum + a.minutes, 0);
+    const hadTrainingToday = todayMins > 0;
+
+    const avgPerDay = goal / totalDays;
+    const trackedDays = eventNotStarted
+        ? 0
+        : (eventEnded ? totalDays : diffDays(event.startDate, todayStr) + 1);
+    const yourPerDay = trackedDays > 0 ? totalMins / trackedDays : 0;
+    const deltaMinutes = trackedDays > 0 ? totalMins - (avgPerDay * trackedDays) : 0;
+    const remainingDaysAfterToday = eventEnded || eventNotStarted ? 0 : diffDays(todayStr, event.endDate);
+    const remainingToGoal = Math.max(goal - totalMins, 0);
+
+    let forecastCard = `
+        <article class="goal-metric-card muted">
+            <span class="goal-metric-label">Forecast na jutro</span>
+            <strong class="goal-metric-main">--:--</strong>
+            <span class="goal-metric-foot">pojawi si\u0119 po treningu dzisiaj</span>
+        </article>`;
+    if (eventNotStarted) {
+        forecastCard = `
+            <article class="goal-metric-card muted">
+                <span class="goal-metric-label">Forecast na jutro</span>
+                <strong class="goal-metric-main">--:--</strong>
+                <span class="goal-metric-foot">dost\u0119pny po starcie eventu</span>
+            </article>`;
+    } else if (goalReached) {
+        forecastCard = `
+            <article class="goal-metric-card muted">
+                <span class="goal-metric-label">Forecast na jutro</span>
+                <strong class="goal-metric-main">--:--</strong>
+                <span class="goal-metric-foot">cel jest ju\u017C domkni\u0119ty</span>
+            </article>`;
+    } else if (eventEnded || remainingDaysAfterToday <= 0) {
+        forecastCard = `
+            <article class="goal-metric-card muted">
+                <span class="goal-metric-label">Forecast na jutro</span>
+                <strong class="goal-metric-main">--:--</strong>
+                <span class="goal-metric-foot">brak kolejnego dnia eventu</span>
+            </article>`;
+    } else if (hadTrainingToday) {
+        const remainingAfterToday = Math.max(goal - totalMins, 0);
+        const tomorrowRequired = Math.ceil(remainingAfterToday / remainingDaysAfterToday);
+        forecastCard = `
+            <article class="goal-metric-card">
+                <span class="goal-metric-label">Forecast na jutro</span>
+                <strong class="goal-metric-main">${minutesToHHMM(tomorrowRequired)}</strong>
+                <span class="goal-metric-foot">minimum na dzie\u0144</span>
+            </article>`;
+    }
+
+    function deltaLabel(delta) {
+        const absDelta = Math.abs(Math.round(delta));
+        if (absDelta === 0) {
+            return '<span class="goal-delta on-track">R\u00F3wno z planem</span>';
+        }
+        if (delta > 0) {
+            return `<span class="goal-delta ahead">+${formatMinutesWithClock(absDelta)}</span>`;
+        }
+        return `<span class="goal-delta behind">-${formatMinutesWithClock(absDelta)}</span>`;
+    }
+
+    let yourTempoCard = `
+        <article class="goal-metric-card muted">
+            <span class="goal-metric-label">Twoje tempo</span>
+            <strong class="goal-metric-main">--:--</strong>
+            <span class="goal-metric-foot">wystartuje z eventem</span>
+        </article>`;
+    if (!eventNotStarted) {
+        yourTempoCard = `
+            <article class="goal-metric-card">
+                <span class="goal-metric-label">Twoje tempo</span>
+                <div class="goal-metric-main-row">
+                    <strong class="goal-metric-main">${minutesToHHMM(yourPerDay)}</strong>
+                    ${deltaLabel(deltaMinutes)}
+                </div>
+                <span class="goal-metric-foot">na dzie\u0144</span>
+            </article>`;
+    }
+
+    let statusClass = 'neutral';
+    let statusLabel = 'Do celu zosta\u0142o';
+    let statusText = formatMinutesWithClock(remainingToGoal);
+    if (eventNotStarted) {
+        statusLabel = 'Start wyzwania';
+        statusText = formatDate(event.startDate);
+    } else if (goalReached) {
+        const surplus = Math.max(totalMins - goal, 0);
+        statusClass = 'success';
+        statusLabel = surplus > 0 ? 'Masz zapas' : 'Cel osi\u0105gni\u0119ty';
+        statusText = surplus > 0 ? formatMinutesWithClock(surplus) : `${goalPts} pkt gotowe`;
+    } else if (eventEnded) {
+        statusClass = 'danger';
+        statusLabel = 'Zabrak\u0142o';
+        statusText = formatMinutesWithClock(goal - totalMins);
+    }
+
+    el.innerHTML = `
+        <div class="goal-summary ${statusClass}">
+            <span class="goal-summary-label">${statusLabel}</span>
+            <strong class="goal-summary-value">${statusText}</strong>
+        </div>
+        <div class="goal-metrics">
+            <article class="goal-metric-card">
+                <span class="goal-metric-label">\u015Arednie tempo</span>
+                <strong class="goal-metric-main">${minutesToHHMM(avgPerDay)}</strong>
+                <span class="goal-metric-foot">na dzie\u0144</span>
+            </article>
+            ${yourTempoCard}
+            ${forecastCard}
+        </div>
+    `;
+    el.classList.add('visible');
 }
 
 // ── Render: activities ──────────────────────────────────────────────
@@ -268,7 +454,7 @@ function renderActivities() {
                     <div class="activity-date">${formatDate(a.date)}</div>
                 </div>
             </div>
-            <div class="activity-minutes">${minutesToDisplay(a.minutes)}</div>
+            <div class="activity-minutes">${minutesToHHMM(a.minutes)}</div>
             <div class="activity-actions">
                 <button class="icon-btn edit" title="Edytuj" onclick="startEditActivity(${a.id})">&#9998;</button>
                 <button class="icon-btn delete" title="Usu\u0144" onclick="deleteActivity(${a.id})">&#10005;</button>
@@ -303,7 +489,7 @@ function openActivityModal() {
     document.getElementById('actType').value = 'running';
     document.getElementById('actName').value = '';
     document.getElementById('actTime').value = '';
-    document.getElementById('actDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('actDate').value = getLocalDateString();
     document.getElementById('activityModal').classList.add('active');
     document.getElementById('actName').focus();
 }
@@ -354,7 +540,7 @@ function submitActivity() {
             act.type = type;
             act.name = name;
             act.minutes = minutes;
-            act.date = date || new Date().toISOString().split('T')[0];
+            act.date = date || getLocalDateString();
         }
     } else {
         data.activities.push({
@@ -362,7 +548,7 @@ function submitActivity() {
             type,
             name,
             minutes,
-            date: date || new Date().toISOString().split('T')[0]
+            date: date || getLocalDateString()
         });
     }
 
@@ -498,6 +684,15 @@ function renderAll() {
     renderProgress();
     renderActivities();
 }
+
+// Event delegation for threshold marker clicks
+document.getElementById('thresholdMarkers').addEventListener('click', function(e) {
+    const marker = e.target.closest('.threshold-marker');
+    if (!marker) return;
+    const mins = parseInt(marker.dataset.mins);
+    const pts = parseInt(marker.dataset.pts);
+    if (!isNaN(mins) && !isNaN(pts)) selectGoal(mins, pts);
+});
 
 // ── Event Export / Import ───────────────────────────────────────────
 
