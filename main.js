@@ -1,5 +1,5 @@
-const { app, BrowserWindow } = require('electron');
-const { spawn } = require('child_process');
+const { app, BrowserWindow, dialog } = require('electron');
+const { spawn, spawnSync } = require('child_process');
 const path = require('path');
 const net = require('net');
 const fs = require('fs');
@@ -7,6 +7,32 @@ const fs = require('fs');
 const PORT = 3001;
 let serverProcess = null;
 let mainWindow = null;
+
+function findPythonRuntime() {
+  const candidates = process.platform === 'win32'
+    ? [
+        { command: 'py', args: ['-3'] },
+        { command: 'python', args: [] },
+        { command: 'python3', args: [] },
+      ]
+    : [
+        { command: 'python3', args: [] },
+        { command: 'python', args: [] },
+      ];
+
+  for (const candidate of candidates) {
+    const probe = spawnSync(candidate.command, [...candidate.args, '--version'], {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+
+    if (probe.status === 0) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
 
 function getResourcePath(filename) {
   if (app.isPackaged) {
@@ -42,12 +68,24 @@ function copyAppFiles() {
 function startServer() {
   const dataDir = getDataDir();
   const serverPath = path.join(dataDir, 'server.py');
+  const pythonRuntime = findPythonRuntime();
 
-  serverProcess = spawn('python', [serverPath], {
+  if (!pythonRuntime) {
+    dialog.showErrorBox(
+      'Brak Python 3',
+      'Aplikacja potrzebuje Python 3, aby uruchomić lokalny backend. Zainstaluj Python 3 lub uruchom aplikację na komputerze, który już go ma.'
+    );
+    return false;
+  }
+
+  serverProcess = spawn(pythonRuntime.command, [...pythonRuntime.args, serverPath], {
     cwd: dataDir,
     env: { ...process.env },
     stdio: ['pipe', 'pipe', 'pipe'],
+    windowsHide: true,
   });
+
+  console.log(`[app] Python runtime: ${pythonRuntime.command} ${pythonRuntime.args.join(' ')}`.trim());
 
   serverProcess.stdout.on('data', (data) => {
     console.log(`[server] ${data.toString().trim()}`);
@@ -65,6 +103,8 @@ function startServer() {
     console.log(`Server exited with code ${code}`);
     serverProcess = null;
   });
+
+  return true;
 }
 
 function waitForServer(retries = 30) {
@@ -107,14 +147,14 @@ function waitForServer(retries = 30) {
   });
 }
 
-function createWindow() {
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 900,
     height: 900,
     minWidth: 500,
     minHeight: 600,
     backgroundColor: '#1a1a2e',
-    icon: path.join(__dirname, 'icon.ico'),
+    icon: getResourcePath('icon.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -122,6 +162,19 @@ function createWindow() {
     autoHideMenuBar: true,
     title: 'Strava Challenge Tracker',
   });
+
+  if (app.isPackaged) {
+    const ses = mainWindow.webContents.session;
+    try {
+      await ses.clearCache();
+      await ses.clearStorageData({
+        storages: ['serviceworkers', 'cachestorage'],
+      });
+      console.log('[app] Cleared packaged app cache');
+    } catch (err) {
+      console.warn('[app] Failed to clear cache:', err.message);
+    }
+  }
 
   mainWindow.loadURL(`http://localhost:${PORT}`);
 
@@ -142,13 +195,20 @@ app.whenReady().then(async () => {
     copyAppFiles();
   }
 
-  startServer();
+  if (!startServer()) {
+    app.quit();
+    return;
+  }
 
   try {
     await waitForServer();
-    createWindow();
+    await createWindow();
   } catch (err) {
     console.error(err.message);
+    dialog.showErrorBox(
+      'Nie udało się uruchomić aplikacji',
+      'Lokalny serwer nie wystartował poprawnie. Sprawdź, czy Python 3 działa na tym komputerze.'
+    );
     app.quit();
   }
 });
